@@ -1,0 +1,5 @@
+E:/Projects/Qt/RogalunaRouteCore/RogalunaRouteCore/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/CMakeFiles/RogalunaRouteCore.dir
+E:/Projects/Qt/RogalunaRouteCore/RogalunaRouteCore/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
+E:/Projects/Qt/RogalunaRouteCore/RogalunaRouteCore/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir
+E:/Projects/Qt/RogalunaRouteCore/RogalunaRouteCore/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/CMakeFiles/RogalunaRouteCore_autogen_timestamp_deps.dir
+E:/Projects/Qt/RogalunaRouteCore/RogalunaRouteCore/build/Desktop_Qt_6_7_3_MinGW_64_bit-Debug/CMakeFiles/RogalunaRouteCore_autogen.dir
