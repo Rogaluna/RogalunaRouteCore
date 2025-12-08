@@ -1,14 +1,39 @@
 #include <QRouteView.h>
-#include <Router.h>
+#include <QGridLayout>
 
-QRouteView::QRouteView(const QString& viewName, QWidget* parent) :
-    QStackedWidget(parent),
-    m_viewName(viewName)
+QRouteView::QRouteView(QWidget* parent) :
+    QWidget(parent)
 {
-    QRouter::instance()->registerViewContainer(this, m_viewName);
+
 }
 
 QRouteView::~QRouteView()
 {
-    QRouter::instance()->unregisterViewContainer(m_viewName);
+
+}
+
+void QRouteView::setWidget(QWidget *view)
+{
+    // 删除旧的
+    // if (m_widget) m_widget->deleteLater();
+    delete m_widget;
+    m_widget = nullptr;
+
+    if (!view) {
+        return;
+    }
+
+    view->setParent(this);
+    view->setGeometry(rect());
+    view->show();
+
+    m_widget = view;
+}
+
+void QRouteView::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    if (m_widget) {
+        m_widget->setGeometry(rect()); // 铺满
+    }
 }

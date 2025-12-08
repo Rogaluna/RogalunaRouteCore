@@ -2,27 +2,27 @@
 #define QROUTEVIEW_H
 
 #include <RogalunaRouteCore_Global.h>
-#include <QStackedWidget>
+#include <QWidget>
 
 /**
  * @brief The QRouteView class
  * 路由视图控件
- * 必须指定视图的名称，否则无法进行导航
- * 视图名称在应用内是唯一的，当视图被注册的时候，名称将作为索引指引页面切换
- *
- * 注意，在使用嵌套路由视图的时候，一定要将控件设置为 keepAlive
+ * 创建一个子视图挂载点，传递的路由将解析为视图对象
  */
-class ROGALUNAROUTECORE_EXPORT QRouteView : public QStackedWidget
+class ROGALUNAROUTECORE_EXPORT QRouteView : public QWidget
 {
     Q_OBJECT
 public:
-    explicit QRouteView(const QString& viewName, QWidget* parent = nullptr);
+    explicit QRouteView(QWidget* parent = nullptr);
     ~QRouteView();
 
-    const QString& viewName() const { return m_viewName; }
+    void setWidget(QWidget* view);
+
+protected:
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
-    QString m_viewName;
+    QWidget* m_widget = nullptr;           // 子视图对象
 };
 
 #endif // QROUTEVIEW_H

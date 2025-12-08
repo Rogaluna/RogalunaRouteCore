@@ -1,26 +1,51 @@
 #include "MainWindow.h"
 #include "./ui_MainWindow.h"
-
-#include <QRouteView.h>
-#include <Router.h>
-
-#include <Page/HomePage.h>
+#include "QGlobalVariable.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , m_routeView(new QRouteView("MAIN_VIEW", this))
 {
     ui->setupUi(this);
-
-    ui->centralwidget->layout()->addWidget(m_routeView);
-
-    REGISTER_PERSISTENT_ROUTE("/", HomePage, "MAIN_VIEW")
-
-    REDIRECT_ROUTE("/")
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+void MainWindow::on_btn_refresh_clicked()
+{
+
+}
+
+
+void MainWindow::on_btn_back_clicked()
+{
+
+}
+
+
+void MainWindow::on_btn_forward_clicked()
+{
+
+}
+
+void MainWindow::on_btn_setting_clicked()
+{
+    QGlobalVariables::instance()->getRouter()->push("/setting");
+}
+
+void MainWindow::on_btn_notFound_clicked()
+{
+    QGlobalVariables::instance()->getRouter()->push("/notFound");
+}
+
+QRouteView *MainWindow::routeViews()
+{
+    return ui->container;
+}
+
+
+
+

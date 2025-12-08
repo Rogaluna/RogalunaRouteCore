@@ -48,10 +48,15 @@ set(PROJECT_SOURCES
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+    find_package(Qt6 REQUIRED COMPONENTS Core)
+
     qt_add_executable(Test
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        Page/HomePage.h Page/HomePage.cpp Page/HomePage.ui
+        Page/PageHome.h Page/PageHome.cpp Page/PageHome.ui
+        Page/PageSetting.h Page/PageSetting.cpp Page/PageSetting.ui
+        QGlobalVariable.h QGlobalVariable.cpp
+        Page/Home/PageOne.h Page/Home/PageOne.cpp Page/Home/PageOne.ui
 
     )
 # Define target properties for Android with Qt 6 as:
@@ -81,6 +86,7 @@ if(ROGALUNA_ROUTE_CORE_LIBRARY AND ROGALUNA_ROUTE_CORE_INCLUDE)
 
     # 链接到目标
     target_link_libraries(Test PUBLIC ${ROGALUNA_ROUTE_CORE_LIBRARY})
+    target_link_libraries(Test PRIVATE Qt6::Core)
     target_include_directories(Test PUBLIC ${ROGALUNA_ROUTE_CORE_INCLUDE})
 else()
     message(FATAL_ERROR "Could not find required library")
