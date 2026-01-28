@@ -4,22 +4,19 @@
 #include <QMap>
 #include <QWidget>
 #include <QRouteView.h>
+#include <Define.h>
 
 class IRoutable {
     friend class QRouter;
 protected:
-    // // 进入页面(仅在切入页面的时候触发)
-    // virtual void enterRoute(const QVariantMap& params) = 0;
-
-    // // 离开页面
-    // virtual void leaveRoute() = 0;
-
-    // // 接收页面参数(可在任何时候触发)
-    // virtual void receiveParams(const QVariantMap& params) = 0;
-
     // 获取视图（每一个界面中最多允许存在一个视图容器），
     virtual QRouteView* routeViews() = 0;
 
+    // 自定义状态，在离开界面时获取返回的页面缓存值，以待还原时使用
+    virtual QVariantMap cacheData() { return {}; };
+
+    // 实例路由对象，仅在类实例化后由路由器赋值，从而将实例和路由定义本身所关联起来
+    FRouteObject* m_instRouteObject = nullptr;
 };
 
 Q_DECLARE_INTERFACE(IRoutable, "IRoutable")

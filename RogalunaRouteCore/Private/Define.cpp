@@ -1,105 +1,124 @@
-#include <Define.h>
-
+#include "Define.h"
 #include <QUrlQuery>
 
-FRouteDesc::FRouteDesc(const QString &_path)
-    : m_path(_path)
-{
-    parsePath();
-}
-
-void FRouteDesc::parsePath()
-{
-    // 1. 分离片段标识符 (#fragment)
-    int fragmentPos = m_path.indexOf('#');
-    if (fragmentPos != -1) {
-        m_fragment = m_path.mid(fragmentPos + 1);
-        // 基础路径先去掉片段
-        m_basePath = m_path.left(fragmentPos);
-    } else {
-        m_basePath = m_path;
-    }
-
-    // 2. 分离查询参数 (?key=value&...)
-    int queryPos = m_basePath.indexOf('?');
-    QString pathWithoutQuery = m_basePath;
-    if (queryPos != -1) {
-        QString queryString = m_basePath.mid(queryPos + 1);
-        pathWithoutQuery = m_basePath.left(queryPos);
-
-        // --- 修改点：只存储查询参数的键（QList<QString) ---
-        QUrlQuery urlQuery(queryString);
-        QList<QPair<QString, QString>> queryItems = urlQuery.queryItems(QUrl::FullyDecoded);
-        for (const auto& item : queryItems) {
-            // 只添加键（如 key1, key2），忽略值
-            m_queryParams.append(item.first);
-        }
-
-        // 更新基础路径，移除查询部分
-        m_basePath = pathWithoutQuery;
-    }
-
-    // 3. 解析路径段 (基于最终的 m_basePath)
-    m_segments = m_basePath.split('/', Qt::SkipEmptyParts);
-}
-
-FRouteObject::FRouteObject(const QString &path, CreatorFunc creator, const QString &viewName, const QVariantMap &meta, const QVector<FRouteObject*>& children)
-    : m_routeDesc(path)
-    , m_creator(std::move(creator)) // 移动语义
+FRouteObject::FRouteObject(const QString& path,
+                           CreatorFunc creator,
+                           const QString& viewName,
+                           const QVariantMap& meta,
+                           const QVector<FRouteObject*>& children,
+                           QObject* parent)
+    : QObject(parent)
+    , m_path(path)
+    , m_creator(std::move(creator))
     , m_viewName(viewName)
     , m_meta(meta)
     , m_widgetInstance(nullptr)
-    , m_children(children)
-    , m_parent(nullptr)
 {
+    parsePath();
 
-    for (const auto& child : children)
-    {
-        child->setParent(this);
+    // 将传入的子路由设置为当前对象的子对象（自动加入 QObject 树）
+    for (FRouteObject* child : children) {
+        if (child) {
+            child->setParent(this);
+        }
     }
-
 }
 
-QWidget *FRouteObject::createWidget()
+void FRouteObject::parsePath()
+{
+    // 1. 分离片段标识符 (#fragment)
+    int fragPos = m_path.indexOf('#');
+    QString basePathWithQuery;
+    if (fragPos != -1) {
+        m_fragment = m_path.mid(fragPos + 1);
+        basePathWithQuery = m_path.left(fragPos);
+    } else {
+        m_fragment.clear();
+        basePathWithQuery = m_path;
+    }
+
+    // 2. 分离查询参数 (?key=value...)
+    int queryPos = basePathWithQuery.indexOf('?');
+    QString cleanPath;
+    if (queryPos != -1) {
+        QString queryString = basePathWithQuery.mid(queryPos + 1);
+        cleanPath = basePathWithQuery.left(queryPos);
+
+        QUrlQuery urlQuery(queryString);
+        for (const auto& item : urlQuery.queryItems(QUrl::FullyDecoded)) {
+            m_queryParams.append(item.first); // 只存 key
+        }
+    } else {
+        cleanPath = basePathWithQuery;
+    }
+
+    // 3. 提取路径段
+    m_segments = cleanPath.split('/', Qt::SkipEmptyParts);
+
+    // 4. 提取路径参数占位符（如 ":id"）
+    m_pathParams.clear();
+    for (const QString& seg : m_segments) {
+        if (seg.startsWith(':')) {
+            m_pathParams.append(seg);
+        }
+    }
+}
+
+QWidget* FRouteObject::createWidget()
 {
     if (m_creator) {
-        QWidget* widget = m_creator();
-        // 更新内部持有的实例指针（如果需要跟踪最后一次创建的实例）
-        // 注意：QPointer 会在指向的对象被 delete 后自动置空
-        m_widgetInstance = widget;
-        return widget;
+        QWidget* w = m_creator();
+        m_widgetInstance = w;
+        return w;
     }
-    return nullptr; // creator 未设置或无效
+    return nullptr;
 }
 
-FRouteObject &FRouteObject::withMeta(const QVariantMap &meta)
+FRouteObject& FRouteObject::withMeta(const QVariantMap& meta)
 {
     m_meta = meta;
-    return *this; // 返回自身引用以支持链式调用 (fluent interface)
-}
-
-FRouteObject &FRouteObject::withViewName(const QString &viewName)
-{
-    m_viewName = viewName;
-    return *this; // 返回自身引用以支持链式调用
-}
-
-FRouteObject &FRouteObject::withChildren(FRouteObject* route)
-{
-    m_children.append(route);
     return *this;
 }
 
-QVector<FRouteObject *> FRouteObject::getPathNodes() const
+FRouteObject& FRouteObject::withViewName(const QString& viewName)
+{
+    m_viewName = viewName;
+    return *this;
+}
+
+FRouteObject& FRouteObject::withChildren(FRouteObject* route)
+{
+    if (route) {
+        route->setParent(this); // 利用 QObject 的父子机制
+    }
+    return *this;
+}
+
+QVector<FRouteObject*> FRouteObject::getPathNodes() const
 {
     QVector<FRouteObject*> path;
-
-    // 1. 向上回溯收集所有祖先节点（包括自己）
-    FRouteObject* current = const_cast<FRouteObject*>(this);
+    const FRouteObject* current = this;
     while (current) {
-        path.prepend(current);
-        current = const_cast<FRouteObject*>(current->parent()); // parent() is const, cast for assignment
+        path.prepend(const_cast<FRouteObject*>(current));
+        current = qobject_cast<const FRouteObject*>(current->parent());
+    }
+    return path;
+}
+
+QString FRouteObject::getAbsolutePath() const
+{
+    if (m_path == "/") {
+        return "/";
     }
 
-    return path;
+    QStringList parts;
+    const FRouteObject* node = this;
+    while (node) {
+        if (node->m_path != "/") {
+            parts.prepend(node->m_path);
+        }
+        node = qobject_cast<const FRouteObject*>(node->parent());
+    }
+
+    return "/" + parts.join("/");
 }

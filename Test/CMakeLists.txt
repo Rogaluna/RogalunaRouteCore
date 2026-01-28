@@ -57,6 +57,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         Page/PageSetting.h Page/PageSetting.cpp Page/PageSetting.ui
         QGlobalVariable.h QGlobalVariable.cpp
         Page/Home/PageOne.h Page/Home/PageOne.cpp Page/Home/PageOne.ui
+        Page/Home/PageTwo.h Page/Home/PageTwo.cpp Page/Home/PageTwo.ui
+
 
     )
 # Define target properties for Android with Qt 6 as:

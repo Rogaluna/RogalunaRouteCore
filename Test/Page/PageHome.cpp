@@ -22,5 +22,11 @@ QRouteView *PageHome::routeViews()
 
 void PageHome::on_btn_pageOne_clicked()
 {
-    QGlobalVariables::instance()->getRouter()->push("/page1");
+    QGlobalVariables::instance()->getRouter()->push("page1", this);
 }
+
+void PageHome::on_btn_pageTwo_clicked()
+{
+    QGlobalVariables::instance()->getRouter()->push("page2", this);
+}
+

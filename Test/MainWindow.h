@@ -31,6 +31,12 @@ private slots:
 
     void on_btn_notFound_clicked();
 
+private slots:
+    void on_route_path_changed(const QString& path);
+    void on_route_changed(FRouteObject *m_currentRouteObject);
+
+    void on_le_routePath_returnPressed();
+
 protected:
     virtual QRouteView* routeViews() override;
 

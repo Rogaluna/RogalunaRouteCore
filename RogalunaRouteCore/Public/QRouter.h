@@ -6,6 +6,8 @@
 
 #include <Interface/IRoutable.h>
 
+#include <QRouteHistory.h>
+
 /**
  * @brief The QRoute class
  * 路由调配类，需要在应用全局作用域内挂载，建议使用单例携带此变量。
@@ -15,6 +17,8 @@ class ROGALUNAROUTECORE_EXPORT QRouter : public QObject
 {
     Q_OBJECT
 public:
+    using CreatorFunc = std::function<QWidget*()>;
+public:
     explicit QRouter(QObject *parent = nullptr);
 
     /**
@@ -22,61 +26,61 @@ public:
      * @param routes 路由树的顶层节点列表
      * @param rootView 根视图，必须是一个实现了接口 IRoutable 的界面
      */
-    void install(const QVector<FRouteObject*>& routes, IRoutable* rootView);
+    void install(FRouteObject* routes, IRoutable* rootView);
 
     /**
      * @brief 设置未定义路由的界面，允许在实际工程内使用自定义的未定义界面
      * @param view 要进行设置的控件指针
      */
-    void setNotFoundView(QWidget* view);
-
-    /**
-     * @brief 导航到指定路径（绝对路径）
-     * 根据路径查找匹配的路由，创建对应的页面 Widget，并将其显示在配置的容器中。
-     * @param path 完整目标路径 (e.g., "/user/123", "/settings/profile")
-     * @return true 导航成功, false 导航失败 (如未找到匹配路由)
-     */
-    bool navTo(const QString& fullPath);
+    void setNotFoundView(CreatorFunc view);
 
     /**
      * @brief 导航到指定路径（相对路径）
      * @param path 相对的目标路径（e.g., "/page")
+     * @param parent 指定 push 的控件，当路径使用默认写法时，这个参数必须非空，并且需要使用 IRoutable 的子类，一般使用 this 即可
      * @return true 导航成功, false 导航失败 (如未找到匹配路由)
      */
-    bool push(const QString& path);
+    bool push(const QString &path, QWidget* parent);
+
+    /**
+     * @brief 下一页
+     */
+    void nextPage();
+
+    /**
+     * @brief 上一页
+     */
+    void prePage();
+
+    /**
+     * @brief 刷新（销毁根容器内的页面并重新生成）
+     */
+    void refresh();
 
 signals:
     /**
-     * @brief 路由改变信号
-     * 当 push 成功执行后发射此信号。
-     * @param newRouteDesc 新路由的描述信息 (包含了路径、参数等)
+     * @brief 当前路径发生变更，在进入 push 时触发，变更即将进入的路由路径
+     * @param path
      */
-    void routeChanged(const FRouteDesc& newRouteDesc);
+    void currentRoutePathChange(const QString& path);
+
+    /**
+     * @brief 当前路由对象变更信号，只有在当前路由对象变更时才触发
+     */
+    void currentRouteObjectChange(FRouteObject *currentRouteObject);
+
 
 private:
-    /**
-     * @brief 递归地注册路由（扁平化路径以便快速查找）
-     * @param routes 当前层级的路由列表
-     * @param parentPath 父级路径前缀
-     */
-    void registerRoutesRecursively(const QVector<FRouteObject*>& routes, const QString& parentPath = "");
-    /**
-     * @brief 根据完整路径查找匹配的路由对象及路径参数
-     * 支持静态路径和带 :paramName 的动态路径匹配。
-     * @param fullPath 要匹配的完整路径 (e.g., "/user/456")
-     * @return QPair<FRouteObject*, QMap<QString, QString>>
-     *         first: 匹配的路由对象指针 (若未找到则为 nullptr)
-     *         second: 提取的路径参数 (key: param name, value: param value)
-     */
-    QPair<FRouteObject*, QMap<QString, QString>> findMatchingRoute(const QString& fullPath) const;
+    void buildFlatRouteMap(const QVector<FRouteObject*>& roots);
 
 private:
-    QVector<FRouteObject*> m_registeredRoutes;              // 存储原始注册的路由树（主要用于 install）
+    FRouteObject* m_registeredRoutes;                       // 存储原始注册的路由树（主要用于 install）
     QMap<QString, FRouteObject*> m_flatRouteMap;            // 扁平化的路径到 FRoute 指针的映射，便于快速查找
-    QString m_currentPath;                                  // 当前导航到的完整路径
-    IRoutable *m_rootView;                                  // 根视图，所有后加载的页面都会在此处生成
+    FRouteObject *m_currentRouteObject;                     // 当前视图路由对象
 
-    QWidget *m_notFoundView;                                // 默认视图，当找不到路径的时候，会生成该界面
+    CreatorFunc m_notFoundViewCreator;                      // 默认视图创建器，当找不到路径的时候，会生成该界面
+
+    QRouteHistory* m_history;                               // 历史记录对象
 };
 
 #endif // QROUTER_H

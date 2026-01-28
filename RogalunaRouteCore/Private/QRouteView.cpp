@@ -14,13 +14,13 @@ QRouteView::~QRouteView()
 
 void QRouteView::setWidget(QWidget *view)
 {
-    // 删除旧的
-    // if (m_widget) m_widget->deleteLater();
-    delete m_widget;
-    m_widget = nullptr;
-
-    if (!view) {
+    if (view == nullptr) {
         return;
+    }
+
+    // 解除旧 widget 与本容器的父子关系
+    if (m_widget) {
+        m_widget->setParent(nullptr);
     }
 
     view->setParent(this);
@@ -28,6 +28,23 @@ void QRouteView::setWidget(QWidget *view)
     view->show();
 
     m_widget = view;
+}
+
+void QRouteView::unsetWidget()
+{
+    if (m_widget) {
+        m_widget->setParent(nullptr);
+        m_widget = nullptr;
+    }
+}
+
+void QRouteView::clearWidget()
+{
+    if (m_widget) {
+        m_widget->setParent(nullptr);
+        delete m_widget;
+        m_widget = nullptr;
+    }
 }
 
 void QRouteView::resizeEvent(QResizeEvent *event)

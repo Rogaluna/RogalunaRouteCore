@@ -1,278 +1,235 @@
 #include "QRouter.h"
-
+#include <QStack>
+#include <QDebug>
+#include <QWidget>
 #include <QRegularExpression>
-#include <QTimer>
 
 #include <View/QDefaultNotFoundView.h>
 
 QRouter::QRouter(QObject *parent)
-    : QObject{parent}
-    , m_rootView(nullptr)
-    , m_notFoundView(nullptr)
+    : QObject(parent)
+    , m_currentRouteObject(nullptr)
+    , m_notFoundViewCreator(nullptr)
+    , m_history(nullptr)
 {
-    m_notFoundView = new QDefaultNotFoundView;
+    m_history = new QRouteHistory(this);
 }
 
-void QRouter::install(const QVector<FRouteObject *> &routes, IRoutable* rootView)
+void QRouter::install(FRouteObject* routes, IRoutable* rootView)
 {
-    m_registeredRoutes = routes; // 保存原始树状结构
-    m_flatRouteMap.clear();     // 清空之前的映射
+    // 断言传入的根视图必定是派生自 QWidget 的实体控件
+    Q_ASSERT(dynamic_cast<QWidget*>(rootView) != nullptr);
 
-    // 递归注册所有路由，并构建扁平化映射
-    registerRoutesRecursively(routes, "");
+    if (!rootView) {
+        qWarning() << "QRouter::install: rootView is null!";
+        return;
+    }
 
-    m_rootView = rootView;
+    m_registeredRoutes = routes;
+    m_registeredRoutes->m_widgetInstance = dynamic_cast<QWidget*>(rootView);
+    m_flatRouteMap.clear();
+
+    // 构建路由映射
+    buildFlatRouteMap({routes});
+
+    // 设置默认 notFound 页面
+    setNotFoundView([]() -> QWidget* { return new QDefaultNotFoundView(); });
 }
 
-void QRouter::setNotFoundView(QWidget *view)
+void QRouter::setNotFoundView(CreatorFunc viewCreator)
 {
-    if (view == nullptr) return;
-    m_notFoundView = view;
+    m_notFoundViewCreator = viewCreator;
 }
 
-bool QRouter::navTo(const QString &path)
+bool QRouter::push(const QString &path, QWidget* parent)
 {
-    if (path.isEmpty()) {
-        qWarning() /* << "QRouter::push: Empty path provided."*/;
+    // 解析路径到映射的路由表中：
+
+    // 先解析相对路径，用当前路径和传入的 path 进行拼接，如果能够找到映射的路径，直接使用并使得函数返回 true
+
+    // 当 path 以 "/" 开头时，表示寻找绝对路径，直接解析传入的 path 路径，如果找到了，使用并使得函数返回 true
+
+    // 如果都没有找到，则显示 notFound 页面，并返回 false
+
+    IRoutable* rootView = dynamic_cast<IRoutable*>(m_registeredRoutes->widgetInstance().data());
+
+    if (!rootView) {
+        qWarning() << "QRouter::push: rootView not installed.";
         return false;
     }
 
-    // 1. 查找匹配的路由和参数
-    auto [matchedRoute, pathParams] = findMatchingRoute(path);
+    // === 路径标准化 ===
+    QString targetPath;
+    if (path.startsWith("./")) {
+        // 相对当前路径
+        if (m_currentRouteObject) {
+            targetPath = m_currentRouteObject->getAbsolutePath() + "/" + path;
+        } else {
+            targetPath = "/" + path;
+        }
+    } else if (path.startsWith('/')) {
+        // 使用绝对路径
+        targetPath = path;
+    } else {
+        // 相对指定的父级
+        // Q_ASSERT(parent != nullptr && qobject_cast<IRoutable*>(parent));
 
-    if (!matchedRoute) {
-        qDebug() << "QRouter::push: No matching route found for path:" << path;
-        // TODO: 可以在这里处理 404 Not Found 的情况，例如调用一个特殊的 404 路由
-
-        // 当未找到对应路由时，将 NotFound 界面显示到根容器中
-        QRouteView* rootContainer = m_rootView->routeViews();
-        rootContainer->setWidget(m_notFoundView);
-
-        return false;
-    }
-
-    // 2. 创建页面 Widget
-    // 注意：createWidget 的具体行为取决于 FRouteObject 的实现。
-    // 它可能需要传入 pathParams 等信息。
-    // QWidget* newWidget = matchedRoute->createWidget();
-    // if (!newWidget) {
-    //     qDebug() << "QRouter::push: Failed to create widget for route:" << path;
-    //     // TODO: 可以在这里处理创建失败的情况
-    //     return false;
-    // }
-
-    // 3. 将新页面显示在容器中
-    // 此处将 newWidget 添加到你的页面容器中。
-    // 根据找到的路由一层一层向上溯源，得到一个页面创建列表
-    // 根据这个创建列表，从根上创建页面（如果页面存在则跳过）
-    qDebug() << "QRouter::push: Navigating to path:" << path;
-    qDebug() << "QRouter::push: Matched route path:" << matchedRoute->routeDesc().m_path;
-    // qDebug() << "QRouter::push: Created widget:" << newWidget;
-    if (!pathParams.isEmpty()) {
-        qDebug() << "QRouter::push: Extracted path parameters:" << pathParams;
-    }
-
-    QRouteView* currentContainer = m_rootView->routeViews();
-    QVector<FRouteObject*> pathNodes = matchedRoute->getPathNodes();
-    for (auto pathNode : pathNodes)
-    {
-        if (currentContainer == nullptr) break;
-
-        QWidget* nodeWidget = pathNode->widgetInstance();
-        // TODO
-        // qobject_cast<IRoutable*>(nodeWidget) 判定是否实现了对应接口，如果没有，则应当在编译时报错。
-        if (!nodeWidget) // 如果当前视图不存在，生成视图，设置视图容器并跳转下一个
-        {
-            currentContainer->setWidget(pathNode->createWidget());
+        if (parent != nullptr && qobject_cast<IRoutable*>(parent)) {
+            m_currentRouteObject = qobject_cast<IRoutable*>(parent)->m_instRouteObject;
         }
 
-        nodeWidget = pathNode->widgetInstance();
-        currentContainer = qobject_cast<IRoutable*>(nodeWidget)->routeViews();
+        if (m_currentRouteObject) {
+            targetPath = m_currentRouteObject->getAbsolutePath() + "/" + path;
+        } else {
+            targetPath = "/" + path;
+        }
     }
 
+    // 标准化：合并斜杠、去尾斜杠
+    targetPath = targetPath.trimmed();
+    if (targetPath.isEmpty()) targetPath = "/";
+    static const QRegularExpression multiSlashRegex("/+");
+    targetPath.replace(multiSlashRegex, "/");
+    if (targetPath.length() > 1 && targetPath.endsWith('/'))
+        targetPath.chop(1);
+    if (!targetPath.startsWith('/'))
+        targetPath.prepend('/');
 
-    // --- 容器处理逻辑结束 ---
+    // 目标页面路径变更
+    emit currentRoutePathChange(targetPath);
 
-    // 4. 更新路由器内部状态
-    m_currentPath = path; // Store the path that was pushed
+    // === 查找路由 ===
+    FRouteObject* targetRoute = m_flatRouteMap.value(targetPath, nullptr);
 
-    // 5. 发射信号通知路由已更改
-    // 我们需要一个 FRouteDesc 来传递给信号。
-    // 可以创建一个新的，结合匹配的路由信息和当前路径信息。
-    // 这里简化处理，直接使用输入 path 创建一个新的 Desc。
-    // 更精确的做法可能是将匹配到的 routeDesc 与解析出的 params/query/fragment 合并。
-    FRouteDesc currentDesc(path); // 假设 FRouteDesc 构造函数能正确解析 path
-    emit routeChanged(currentDesc);
+    // === 处理未找到情况 ===
+    if (!targetRoute) {
+        if (m_notFoundViewCreator != nullptr) {
+            // 将 notFoundView 挂到 rootView 的第一个 routeView
+            QRouteView* views = rootView->routeViews();
+            if (views != nullptr) {
+                QWidget* m_notFoundView = m_notFoundViewCreator();
+                views->setWidget(m_notFoundView);
+            } else {
+                qWarning() << "Root view has no routeViews to display notFound page.";
+            }
+            m_currentRouteObject = nullptr;
+            return true; // 视为“成功显示”错误页
+        } else {
+            qWarning() << "Route not found and no notFoundView set:" << path;
+            return false;
+        }
+    }
+
+    // === 获取从根到目标的路由链（顺序：[root, ..., target]）===
+    QVector<FRouteObject*> routeChain = targetRoute->getPathNodes();
+
+    // === 逐级创建并挂载 widget ===
+    IRoutable* currentParentRoutable = rootView; // 初始父容器是 rootView
+
+    // 跳过根路由
+    for (int i = 1; i < routeChain.size(); ++i) {
+        FRouteObject* routeNode = routeChain[i];
+
+        // 创建或复用 widget
+        QWidget* widget = routeNode->widgetInstance();
+        if (!widget) {
+            widget = routeNode->createWidget();
+            qobject_cast<IRoutable*>(widget)->m_instRouteObject = routeNode;
+
+            if (!widget) {
+                // 创建失败
+                qWarning() << "Failed to create widget for route:" << routeNode->getAbsolutePath();
+                return false;
+            }
+        } else {
+            // 即便 widget 还存在在内存中，也需要将其中解除容器内控件与其容器的关联
+            // TODO: 可能有问题...
+            if (qobject_cast<IRoutable*>(widget) && qobject_cast<IRoutable*>(widget)->routeViews() != nullptr) {
+                qobject_cast<IRoutable*>(widget)->routeViews()->unsetWidget();
+            }
+        }
+
+        // 如果是第一个节点（根路由），它应被挂到 rootView 的 routeView 中
+        // 否则，currentParentRoutable 是上一级 widget（已实现 IRoutable）
+
+        auto parentViews = currentParentRoutable->routeViews();
+        if (parentViews == nullptr) {
+            qWarning() << "Parent routable has no routeViews for child route:"
+                       << routeNode->getAbsolutePath();
+            return false;
+        }
+
+        QRouteView* targetView = parentViews; // 使用第一个占位视图
+        targetView->setWidget(widget);
+
+        // 更新 currentParentRoutable：如果当前 widget 支持 IRoutable，则作为下一级父容器
+        currentParentRoutable = qobject_cast<IRoutable*>(widget);
+        if (!currentParentRoutable && i < routeChain.size() - 1) {
+            // 还有子路由要挂，但当前 widget 不支持 IRoutable → 无法嵌套
+            qWarning() << "Widget for route does not implement IRoutable, cannot nest deeper:"
+                       << routeNode->getAbsolutePath();
+            return false;
+        }
+    }
+
+    m_currentRouteObject = targetRoute;
+    emit currentRouteObjectChange(m_currentRouteObject);
+    // 变更页面成功，存入历史记录
+    m_history->push(m_currentRouteObject->getAbsolutePath());
 
     return true;
 }
 
-bool QRouter::push(const QString &path)
+void QRouter::nextPage()
 {
-    // 对当前路径进行分析，去掉查询参数（如果有）
+    QString entry;
+    m_history->next(entry);
+    m_history->setCanOperaState(false);
 
-    // 将传入的相对路径添加得到当前路径中
-    m_currentPath.append(path);
-
-    // 进行导航
-    return navTo(m_currentPath);
+    push(entry, nullptr);
 }
 
-void QRouter::registerRoutesRecursively(const QVector<FRouteObject *> &routes, const QString &parentPath)
+void QRouter::prePage()
 {
-    for (FRouteObject * route : routes) {
-        const QString& routePath = route->routeDesc().m_path;
-        // 计算完整路径
-        QString fullPath;
-        if (parentPath.isEmpty() || parentPath == "/") {
-            if (routePath.startsWith("/")) {
-                fullPath = routePath;
-            } else {
-                fullPath = "/" + routePath;
-            }
-        } else {
-            if (routePath.startsWith("/")) {
-                fullPath = parentPath + routePath; // e.g., "/parent" + "/child"
-            } else {
-                fullPath = parentPath + "/" + routePath; // e.g., "/parent" + "child"
-            }
-        }
-        // 确保路径规范化（处理 // 或结尾的 /）
-        // 这里简化处理，实际可能需要更健壮的路径规范化
-        if (fullPath.endsWith("/") && fullPath != "/") {
-            fullPath.chop(1); // 移除末尾的 '/'
-        }
+    QString entry;
+    m_history->pre(entry);
+    m_history->setCanOperaState(false);
 
-        // 注册到扁平化映射
-        m_flatRouteMap[fullPath] = route;
-        qDebug() << "Registered route:" << fullPath;
-
-        // 递归注册子路由
-        const QVector<FRouteObject*>& children = route->children();
-        if (!children.isEmpty()) {
-            registerRoutesRecursively(children, fullPath);
-        }
-    }
+    push(entry, nullptr);
 }
 
-QPair<FRouteObject *, QMap<QString, QString> > QRouter::findMatchingRoute(const QString &fullPath) const
+void QRouter::refresh()
 {
-    // 1. 解析输入路径的基本信息 (主要是为了获取 basePath 用于匹配)
-    // 假设 FRouteDesc 能正确解析路径
-    FRouteDesc inputDesc(fullPath);
-    const QString& targetBasePath = inputDesc.m_basePath; // We match against the base path
+    m_history->setCanOperaState(false);
+    IRoutable* rootView = dynamic_cast<IRoutable*>(m_registeredRoutes->widgetInstance().data());
+    rootView->routeViews()->clearWidget();
+    push(m_currentRouteObject->getAbsolutePath(), nullptr);
+}
 
-    // 2. 遍历扁平化映射进行匹配
-    // 为了支持动态路由优先于静态路由（例如 /user/new 应该匹配静态路由而不是 /user/:id 的动态路由），
-    // 最好按特定顺序检查，或者在注册时就处理好优先级。
-    // 简单起见，我们先检查完全匹配，再检查动态匹配。
-    // 更健壮的方法是排序路由（静态 > 动态）或构建前缀树。
+void QRouter::buildFlatRouteMap(const QVector<FRouteObject *> &roots)
+{
+    QStack<FRouteObject*> stack;
 
-    // --- 先尝试精确匹配静态路由 ---
-    auto exactIt = m_flatRouteMap.constFind(targetBasePath);
-    if (exactIt != m_flatRouteMap.constEnd()) {
-        FRouteObject* exactRoute = exactIt.value();
-        // 检查该路由的路径是否真的是静态的（不含 :）
-        const QString& registeredPath = exactRoute->routeDesc().m_path;
-        if (!registeredPath.contains(':')) { // Simple check for static route
-            return qMakePair(exactRoute, QMap<QString, QString>());
+    // 将所有根节点压入栈
+    for (FRouteObject* root : roots) {
+        if (root) {
+            stack.push(root);
         }
-        // If it contains ':', it's actually a dynamic route that happened to match exactly,
-        // we should let the dynamic logic handle it to extract params correctly.
-        // Or, design registration such that static routes never contain ':'.
     }
 
+    while (!stack.isEmpty()) {
+        FRouteObject* current = stack.pop();
+        QString absPath = current->getAbsolutePath();
 
-    // --- 动态路由匹配 ---
-    for (auto it = m_flatRouteMap.constBegin(); it != m_flatRouteMap.constEnd(); ++it) {
-        const QString& registeredFullPathKey = it.key(); // Use the flattened key which is the full path
-        FRouteObject* registeredRoute = it.value();
+        // 注册到扁平映射（后注册的会覆盖先注册的同路径路由）
+        m_flatRouteMap[absPath] = current;
 
-        // 获取原始注册路径用于检查是否为动态路由
-        const QString& originalRoutePath = registeredRoute->routeDesc().m_path;
-        static const QRegularExpression hasParamRegex(":([a-zA-Z_][a-zA-Z0-9_]*)");
-        QRegularExpressionMatch isDynamicMatch = hasParamRegex.match(originalRoutePath);
-
-        if (isDynamicMatch.hasMatch()) { // 只处理动态路由
-            QString pattern = registeredFullPathKey; // 使用扁平化后的完整路径 key 作为模式基础
-            QMap<QString, QString> extractedParams;
-
-            // 提取所有参数名
-            QStringList paramNames;
-            QRegularExpressionMatchIterator iter = hasParamRegex.globalMatch(originalRoutePath); // 在原始路径上找参数名
-            while (iter.hasNext()) {
-                QRegularExpressionMatch match = iter.next();
-                paramNames << match.captured(1); // 提取参数名 (group 1)
-            }
-
-            if (!paramNames.isEmpty()) { // 确保有参数需要匹配
-                // 转义路径中的特殊字符，除了我们即将替换的 ':' 占位符部分
-                QString escapedPattern = QRegularExpression::escape(pattern);
-                // 恢复 ':' 字面量 (如果路径中真的有它且未被转义，这步可能不需要，
-                // 但为了安全，先恢复，因为我们的占位符是 :name)
-                // 实际上，: 在 escape 后变成 \: ，但我们希望保留 : 作为占位符标记。
-                // 更准确的做法是直接替换原始路径中的占位符。
-                // 让我们换个思路：直接基于 originalRoutePath 构建正则，然后应用到 registeredFullPathKey 上可能不对。
-                // 因为 originalRoutePath 是相对的，registeredFullPathKey 是绝对的。
-                // 正确的做法应该是基于 registeredFullPathKey 构建正则，并识别其中的 :param 部分。
-
-                // 重新设计：基于 registeredFullPathKey 构建正则
-                QString finalRegexPattern = QRegularExpression::escape(registeredFullPathKey);
-                // 现在，我们需要在 escaped 的 registeredFullPathKey 中找到并替换 :param 部分。
-                // 但是 escaped 后 : 变成了 \: 。所以我们需要在 escape 之前做替换。
-                // 最清晰的方法：直接处理原始的、完整的路径字符串来构建正则。
-
-                // 让我们用一种更清晰的方式来构建正则：
-                // 1. 从 registeredFullPathKey 开始 (因为它已经是完整的绝对路径)
-                // 2. 找到其中所有类似 :paramName 的部分
-                // 3. 将这些部分替换为正则表达式捕获组
-                // 4. 对整个字符串进行转义（除了捕获组）
-
-                // 然而，registeredFullPathKey 是已经拼接好的绝对路径，其中的 :param 已经是具体的了。
-                // 我们需要回到原始的父子关系来正确构建。
-
-                // 最佳实践：在注册时，就应该为每个 *原始路径* 构建其对应的正则表达式和参数名列表。
-                // 为了简化当前修改，我们就在匹配时现场构建。
-
-                // 修正策略：
-                // 1. 我们知道 registeredFullPathKey 是 "/parent/:id" 这样的完整路径。
-                // 2. 我们需要把它变成正则 "/parent/([^/]+)"
-                // 3. 同时记住参数名 ["id"]
-
-                // 提取参数名 (已在上面完成)
-                // 构建正则：先转义整个 registeredFullPathKey，然后替换 \:param 为 ([^/]+)
-                // 注意：escape 会把 : 变成 \:
-                QString tempPatternForRegex = QRegularExpression::escape(registeredFullPathKey);
-                // 替换转义后的占位符
-                for (const QString& paramName : paramNames) {
-                    QString escapedPlaceholder = "\\:" + QRegularExpression::escape(paramName); // \:id
-                    QString replacement = "([^/]+)"; // 捕获组
-                    tempPatternForRegex.replace(QRegularExpression(escapedPlaceholder), replacement);
-                }
-                finalRegexPattern = "^" + tempPatternForRegex + "$"; // 锚定开始和结束以确保完全匹配
-
-
-                QRegularExpression regex(finalRegexPattern);
-                QRegularExpressionMatch pathMatch = regex.match(targetBasePath); // 在目标路径上匹配
-
-                if (pathMatch.hasMatch()) {
-                    // 提取捕获组到参数 map
-                    for (int i = 0; i < paramNames.size(); ++i) {
-                        QString value = pathMatch.captured(i + 1); // Group 0 is full match, groups start from 1
-                        if (!value.isEmpty()) {
-                            // TODO: Consider URL decoding if needed (QUrl::fromPercentEncoding)
-                            extractedParams[paramNames[i]] = value;
-                        }
-                    }
-                    // 找到第一个匹配的动态路由即返回
-                    // （注意：实际路由库可能会有更复杂的优先级规则）
-                    return qMakePair(registeredRoute, extractedParams);
-                }
+        // 遍历子节点（通过 QObject 的 children()）
+        const QObjectList& children = current->children();
+        for (QObject* childObj : children) {
+            if (FRouteObject* childRoute = qobject_cast<FRouteObject*>(childObj)) {
+                stack.push(childRoute);
             }
         }
-        // 如果 registeredRoute 是静态的，已经在前面的精确匹配阶段处理过了。
     }
-
-    // 3. 未找到匹配
-    return qMakePair<FRouteObject*, QMap<QString, QString>>(nullptr, QMap<QString, QString>());
 }

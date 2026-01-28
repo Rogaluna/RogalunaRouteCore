@@ -7,6 +7,7 @@
 #include <Page/PageSetting.h>
 
 #include <Page/Home/PageOne.h>
+#include <Page/Home/PageTwo.h>
 
 int main(int argc, char *argv[])
 {
@@ -16,33 +17,34 @@ int main(int argc, char *argv[])
 
     QRouter* router = QGlobalVariables::instance()->getRouter();
 
-    QVector<FRouteObject*> routes =  {
-
-    new FRouteObject(
-        "/home",
-        []() -> QWidget* { return new PageHome(); },
-        "home", {},
-            {
-                new FRouteObject(
-                    "/page1",
-                    []() -> QWidget* { return new PageOne(); },
-                    "page1"),
-            }
-        ),
-    new FRouteObject(
-        "/setting",
+    FRouteObject* routes = new FRouteObject(
+        "/",
         []() -> QWidget* { return new PageSetting(); },
-        "setting"),
-    };
+        "", {}, {
+            new FRouteObject(
+                "home",
+                []() -> QWidget* { return new PageHome(); },
+                "home", {},
+                {
+                    new FRouteObject(
+                        "page1",
+                        []() -> QWidget* { return new PageOne(); },
+                        "page1"),
+                    new FRouteObject(
+                        "page2",
+                        []() -> QWidget* { return new PageTwo(); },
+                        "page2"),
+                }
+                ),
+            new FRouteObject(
+                "setting",
+                []() -> QWidget* { return new PageSetting(); },
+                "setting"),
+         });
 
     router->install(routes, &w);
 
-    QObject::connect(router, &QRouter::routeChanged,
-                     [](const FRouteDesc& desc) {
-                         qDebug() << "Route changed to:" << desc.m_path;
-                     });
-
-    router->push("/home");
+    router->push("/home", nullptr);
 
     return a.exec();
 }

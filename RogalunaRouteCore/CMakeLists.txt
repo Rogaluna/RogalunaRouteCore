@@ -35,8 +35,10 @@ file(GLOB_RECURSE PRIVATE_SOURCES
 )
 
 find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
-add_library(RogalunaRouteCore SHARED)
+add_library(RogalunaRouteCore SHARED
+)
 
 target_sources(RogalunaRouteCore
     PRIVATE ${PRIVATE_SOURCES}
@@ -64,6 +66,7 @@ target_link_libraries(RogalunaRouteCore PUBLIC
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
 )
+target_link_libraries(RogalunaRouteCore PRIVATE Qt6::Core)
 target_link_libraries(RogalunaRouteCore PRIVATE Qt6::Core)
 
 # ===== 安装配置 =====
