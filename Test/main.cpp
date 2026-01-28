@@ -12,11 +12,14 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    // 根视图
     MainWindow w;
     w.show();
 
+    // QGlobalVariables 是一个全局单例类，将 router 实例化到此处以便全局访问
     QRouter* router = QGlobalVariables::instance()->getRouter();
 
+    // 树形路由对象
     FRouteObject* routes = new FRouteObject(
         "/",
         []() -> QWidget* { return new PageSetting(); },
@@ -42,6 +45,7 @@ int main(int argc, char *argv[])
                 "setting"),
          });
 
+    // 将路由安装到根视图中
     router->install(routes, &w);
 
     router->push("/home", nullptr);
