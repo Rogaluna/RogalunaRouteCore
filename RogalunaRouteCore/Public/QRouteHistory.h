@@ -18,6 +18,17 @@ class QRouteHistory : public QObject
 public:
     explicit QRouteHistory(QObject *parent = nullptr);
 
+    /**
+     * @brief getCanOperaState & setCanOperaState
+     *
+     * @note 用于设置能否操作历史记录栈，如果之前禁用的操作状态没有消耗掉，则会导致无法正常写入历史
+     * 一般在进行 next 或 pre 之前进行 setCanOperaState 禁用历史操作。不要在其他地方调用它们，除非你知道你在做什么
+     *
+     * @example
+     *     QString entry;
+     *     m_history->pre(entry);
+     *     m_history->setCanOperaState(false);
+     */
     bool getCanOperaState() const { return m_bCanOpera; };
     void setCanOperaState(bool state) { m_bCanOpera = state; };
 

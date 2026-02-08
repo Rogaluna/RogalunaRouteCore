@@ -38,6 +38,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 
 add_library(RogalunaRouteCore SHARED
+
 )
 
 target_sources(RogalunaRouteCore

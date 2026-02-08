@@ -3,11 +3,8 @@
 
 #include <QApplication>
 
-#include <Page/PageHome.h>
-#include <Page/PageSetting.h>
-
-#include <Page/Home/PageOne.h>
-#include <Page/Home/PageTwo.h>
+#include <Application/PageHome.h>
+#include <Application/PageSetting.h>
 
 int main(int argc, char *argv[])
 {
@@ -22,28 +19,30 @@ int main(int argc, char *argv[])
     // 树形路由对象
     FRouteObject* routes = new FRouteObject(
         "/",
-        []() -> QWidget* { return new PageSetting(); },
-        "", {}, {
+        []() -> QWidget* { return nullptr; },
+        "", {},
+        {
             new FRouteObject(
                 "home",
                 []() -> QWidget* { return new PageHome(); },
                 "home", {},
                 {
-                    new FRouteObject(
-                        "page1",
-                        []() -> QWidget* { return new PageOne(); },
-                        "page1"),
-                    new FRouteObject(
-                        "page2",
-                        []() -> QWidget* { return new PageTwo(); },
-                        "page2"),
+                    // new FRouteObject(
+                    //     "page1",
+                    //     []() -> QWidget* { return new PageOne(); },
+                    //     "page1"),
+                    // new FRouteObject(
+                    //     "page2",
+                    //     []() -> QWidget* { return new PageTwo(); },
+                    //     "page2"),
                 }
-                ),
+                )
+            ,
             new FRouteObject(
                 "setting",
                 []() -> QWidget* { return new PageSetting(); },
                 "setting"),
-         });
+        });
 
     // 将路由安装到根视图中
     router->install(routes, &w);

@@ -1,5 +1,5 @@
-#include "PageSetting.h"
-#include "ui_PageSetting.h"
+#include "Application/PageSetting.h"
+#include "./ui_PageSetting.h"
 
 PageSetting::PageSetting(QWidget *parent)
     : QWidget(parent)

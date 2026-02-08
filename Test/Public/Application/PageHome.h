@@ -20,10 +20,6 @@ public:
 protected:
     virtual QRouteView* routeViews() override;
 
-private slots:
-    void on_btn_pageOne_clicked();
-    void on_btn_pageTwo_clicked();
-
 private:
     Ui::PageHome *ui;
 };

@@ -10,8 +10,14 @@ QRouteHistory::QRouteHistory(QObject *parent)
 
 void QRouteHistory::push(const QString &entry)
 {
-    m_pastPath.push_back(entry);
-    m_futurePath.clear();
+    if (m_bCanOpera)
+    {
+        m_pastPath.push_back(entry);
+        m_futurePath.clear();
+    }
+
+    // 重置操作状态
+    setCanOperaState(true);
 }
 
 void QRouteHistory::next(QString &entry)
@@ -19,9 +25,8 @@ void QRouteHistory::next(QString &entry)
     if (m_bCanOpera == false) return;
 
     if (m_futurePath.size() == 0) return;
-    QString historyPath = QString();
-    historyPath = m_futurePath.last();
-    m_pastPath.push_back(historyPath);
+    entry = m_futurePath.last();
+    m_pastPath.push_back(entry);
     m_futurePath.removeLast();
 }
 
@@ -29,9 +34,9 @@ void QRouteHistory::pre(QString &entry)
 {
     if (m_bCanOpera == false) return;
 
-    if (m_pastPath.size() == 0) return;
-    QString historyPath = QString();
-    historyPath = m_pastPath.last();
-    m_futurePath.push_back(historyPath);
+    if (m_pastPath.size() == 1) return;
+    m_futurePath.push_back(QString(m_pastPath.last()));
     m_pastPath.removeLast();
+
+    entry = m_pastPath.last();
 }

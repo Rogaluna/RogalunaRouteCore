@@ -40,11 +40,22 @@ find_path(ROGALUNA_ROUTE_CORE_INCLUDE
     NO_DEFAULT_PATH
 )
 
-set(PROJECT_SOURCES
-        main.cpp
-        MainWindow.cpp
-        MainWindow.h
-        MainWindow.ui
+# 自动收集 Public 头文件
+file(GLOB_RECURSE PUBLIC_HEADERS
+    LIST_DIRECTORIES false
+    ${CMAKE_CURRENT_SOURCE_DIR}/Public/*.h
+)
+
+# 自动收集 Private 源文件
+file(GLOB_RECURSE PRIVATE_SOURCES
+    LIST_DIRECTORIES false
+    ${CMAKE_CURRENT_SOURCE_DIR}/Private/*.cpp
+)
+
+# 自动收集 UserInterface ui文件
+file(GLOB_RECURSE USERINTERFACE_FILES
+    LIST_DIRECTORIES false
+    ${CMAKE_CURRENT_SOURCE_DIR}/Private/*.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -52,14 +63,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 
     qt_add_executable(Test
         MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-        Page/PageHome.h Page/PageHome.cpp Page/PageHome.ui
-        Page/PageSetting.h Page/PageSetting.cpp Page/PageSetting.ui
-        QGlobalVariable.h QGlobalVariable.cpp
-        Page/Home/PageOne.h Page/Home/PageOne.cpp Page/Home/PageOne.ui
-        Page/Home/PageTwo.h Page/Home/PageTwo.cpp Page/Home/PageTwo.ui
-
-
+        ${PUBLIC_HEADERS}
+        ${PRIVATE_SOURCES}
+        ${USERINTERFACE_FILES}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET Test APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -90,6 +96,7 @@ if(ROGALUNA_ROUTE_CORE_LIBRARY AND ROGALUNA_ROUTE_CORE_INCLUDE)
     target_link_libraries(Test PUBLIC ${ROGALUNA_ROUTE_CORE_LIBRARY})
     target_link_libraries(Test PRIVATE Qt6::Core)
     target_include_directories(Test PUBLIC ${ROGALUNA_ROUTE_CORE_INCLUDE})
+    target_include_directories(Test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Public)
 else()
     message(FATAL_ERROR "Could not find required library")
 endif()
