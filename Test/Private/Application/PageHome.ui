@@ -13,8 +13,29 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">b</string>
+  </property>
+  <property name="windowFilePath">
+   <string/>
+  </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="0">
-   <item row="0" column="0" colspan="2">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
     <widget class="QRouteView" name="container" native="true"/>
    </item>
   </layout>

@@ -23,10 +23,10 @@
    <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,9">
     <item>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="4">
-       <widget class="QPushButton" name="btn_refresh">
+      <item row="0" column="8">
+       <widget class="QPushButton" name="btn_notFound">
         <property name="text">
-         <string>刷新</string>
+         <string>Not Found</string>
         </property>
        </widget>
       </item>
@@ -43,10 +43,13 @@
         </property>
        </spacer>
       </item>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="btn_back">
+      <item row="0" column="3" colspan="5">
+       <widget class="QLineEdit" name="le_routePath"/>
+      </item>
+      <item row="1" column="8">
+       <widget class="QPushButton" name="btn_setting">
         <property name="text">
-         <string>后退</string>
+         <string>设置</string>
         </property>
        </widget>
       </item>
@@ -57,8 +60,19 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="3" colspan="5">
-       <widget class="QLineEdit" name="le_routePath"/>
+      <item row="1" column="4">
+       <widget class="QPushButton" name="btn_refresh">
+        <property name="text">
+         <string>刷新</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="btn_back">
+        <property name="text">
+         <string>后退</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="2">
        <widget class="QLabel" name="label">
@@ -73,24 +87,27 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="8">
-       <widget class="QPushButton" name="btn_notFound">
-        <property name="text">
-         <string>Not Found</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="8">
-       <widget class="QPushButton" name="btn_setting">
-        <property name="text">
-         <string>设置</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
     <item>
-     <widget class="QRouteView" name="container" native="true"/>
+     <widget class="QFrame" name="containerFrame">
+      <property name="styleSheet">
+       <string notr="true">#containerFrame {
+border: 1px solid #666;
+}</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Shape::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Shadow::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QRouteView" name="container" native="true"/>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
