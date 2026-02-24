@@ -1,6 +1,7 @@
 #ifndef PAGEHOME_H
 #define PAGEHOME_H
 
+#include <QTreeWidgetItem>
 #include <QWidget>
 
 #include <Interface/IRoutable.h>
@@ -19,6 +20,9 @@ public:
 
 protected:
     virtual QRouteView* routeViews() override;
+
+private slots:
+    void on_treeWidget_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
 private:
     Ui::PageHome *ui;

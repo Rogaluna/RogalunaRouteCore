@@ -5,6 +5,9 @@
 
 #include <Application/PageHome.h>
 #include <Application/PageSetting.h>
+#include <Application/PageWelcome.h>
+
+#include <Application/Home/PageRedirectExample.h>
 
 int main(int argc, char *argv[])
 {
@@ -25,29 +28,34 @@ int main(int argc, char *argv[])
             new FRouteObject(
                 "home",
                 []() -> QWidget* { return new PageHome(); },
-                "home", {},
+                "home", {{"redirect", "redirectExample"}},
                 {
+                    new FRouteObject(
+                        "redirectExample",
+                        []() -> QWidget* { return new PageRedirectExample(); },
+                        "redirectExample"),
                     // new FRouteObject(
-                    //     "page1",
-                    //     []() -> QWidget* { return new PageOne(); },
-                    //     "page1"),
-                    // new FRouteObject(
-                    //     "page2",
+                    //     "manual",
                     //     []() -> QWidget* { return new PageTwo(); },
-                    //     "page2"),
+                    //     "manual"),
                 }
                 )
             ,
             new FRouteObject(
                 "setting",
                 []() -> QWidget* { return new PageSetting(); },
-                "setting"),
+                "setting")
+            ,
+            new FRouteObject(
+                "welcome",
+                []() -> QWidget* { return new PageWelcome(); },
+                "welcome")
         });
 
     // 将路由安装到根视图中
     router->install(routes, &w);
 
-    router->push("/home", nullptr);
+    router->push("/welcome", nullptr);
 
     return a.exec();
 }

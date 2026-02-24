@@ -40,3 +40,8 @@ void QRouteHistory::pre(QString &entry)
 
     entry = m_pastPath.last();
 }
+
+void QRouteHistory::current(QString &entry)
+{
+    entry = m_pastPath.last();
+}

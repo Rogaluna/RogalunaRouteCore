@@ -51,6 +51,12 @@ private:
      */
     void pre(QString& entry);
 
+    /**
+     * @brief current 获取当前可用路由
+     * @param entry
+     */
+    void current(QString& entry);
+
 
 private:
     QVector<QString> m_pastPath;    // 过去经过的页面路由

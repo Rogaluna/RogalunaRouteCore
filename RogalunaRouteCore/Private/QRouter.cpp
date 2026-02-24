@@ -192,9 +192,20 @@ void QRouter::nextPage()
 void QRouter::prePage()
 {
     QString entry;
-    m_history->pre(entry);
-    m_history->setCanOperaState(false);
+    if (m_currentRouteObject == nullptr)
+    {
+        // 如果当前页面是 notFound, 回退到可用界面
 
+        m_history->current(entry);
+    }
+    else
+    {
+        // 否则从历史记录中取出路径
+
+        m_history->pre(entry);
+    }
+
+    m_history->setCanOperaState(false);
     push(entry, nullptr);
 }
 

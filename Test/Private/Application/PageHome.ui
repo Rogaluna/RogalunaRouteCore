@@ -19,7 +19,7 @@
   <property name="windowFilePath">
    <string/>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="0">
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0" columnstretch="1,0,3">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -36,7 +36,40 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QTreeWidget" name="treeWidget">
+       <column>
+        <property name="text">
+         <string>目录</string>
+        </property>
+       </column>
+       <item>
+        <property name="text">
+         <string>QRouter</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>路由概述</string>
+         </property>
+        </item>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="2">
     <widget class="QRouteView" name="container" native="true"/>
+   </item>
+   <item row="0" column="1">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -40,7 +40,7 @@ public:
      * @param parent 指定 push 的控件，当路径使用默认写法时，这个参数必须非空，并且需要使用 IRoutable 的子类，一般使用 this 即可
      * @return true 导航成功, false 导航失败 (如未找到匹配路由)
      */
-    bool push(const QString &path, QWidget* parent);
+    bool push(const QString &path, QWidget* parent = nullptr);
 
     /**
      * @brief 下一页
