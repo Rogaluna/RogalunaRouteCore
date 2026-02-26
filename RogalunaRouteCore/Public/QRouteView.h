@@ -24,8 +24,15 @@ public:
     void setWidget(QWidget* view);
 
     /**
+     * @brief getWidget
+     * @return
+     * 获取当前设置的视图指针
+     */
+    QWidget* getWidget();
+
+    /**
      * @brief unsetWidget
-     * 解除当前视图与容器的关系，以便 GC 处理
+     * 解除当前视图与容器的关系
      */
     void unsetWidget();
 

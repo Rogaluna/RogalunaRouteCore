@@ -7,6 +7,7 @@
 #include <Application/PageSetting.h>
 #include <Application/PageWelcome.h>
 
+#include <Application/Home/PageManual.h>
 #include <Application/Home/PageRedirectExample.h>
 
 int main(int argc, char *argv[])
@@ -28,16 +29,12 @@ int main(int argc, char *argv[])
             new FRouteObject(
                 "home",
                 []() -> QWidget* { return new PageHome(); },
-                "home", {{"redirect", "redirectExample"}},
+                "home", {{"redirect", "manual"}},
                 {
                     new FRouteObject(
-                        "redirectExample",
-                        []() -> QWidget* { return new PageRedirectExample(); },
-                        "redirectExample"),
-                    // new FRouteObject(
-                    //     "manual",
-                    //     []() -> QWidget* { return new PageTwo(); },
-                    //     "manual"),
+                        "manual",
+                        []() -> QWidget* { return new PageManual(); },
+                        "manual"),
                 }
                 )
             ,

@@ -17,6 +17,10 @@ public:
     explicit PageManual(QWidget *parent = nullptr);
     ~PageManual();
 
+public:
+    virtual void mounted() override;
+    virtual void unmounted() override;
+
 protected:
     virtual QRouteView* routeViews() override { return nullptr; };
 

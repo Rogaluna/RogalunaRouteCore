@@ -14,52 +14,10 @@ FRouteObject::FRouteObject(const QString& path,
     , m_meta(meta)
     , m_widgetInstance(nullptr)
 {
-    parsePath();
-
     // 将传入的子路由设置为当前对象的子对象（自动加入 QObject 树）
     for (FRouteObject* child : children) {
         if (child) {
             child->setParent(this);
-        }
-    }
-}
-
-void FRouteObject::parsePath()
-{
-    // 1. 分离片段标识符 (#fragment)
-    int fragPos = m_path.indexOf('#');
-    QString basePathWithQuery;
-    if (fragPos != -1) {
-        m_fragment = m_path.mid(fragPos + 1);
-        basePathWithQuery = m_path.left(fragPos);
-    } else {
-        m_fragment.clear();
-        basePathWithQuery = m_path;
-    }
-
-    // 2. 分离查询参数 (?key=value...)
-    int queryPos = basePathWithQuery.indexOf('?');
-    QString cleanPath;
-    if (queryPos != -1) {
-        QString queryString = basePathWithQuery.mid(queryPos + 1);
-        cleanPath = basePathWithQuery.left(queryPos);
-
-        QUrlQuery urlQuery(queryString);
-        for (const auto& item : urlQuery.queryItems(QUrl::FullyDecoded)) {
-            m_queryParams.append(item.first); // 只存 key
-        }
-    } else {
-        cleanPath = basePathWithQuery;
-    }
-
-    // 3. 提取路径段
-    m_segments = cleanPath.split('/', Qt::SkipEmptyParts);
-
-    // 4. 提取路径参数占位符（如 ":id"）
-    m_pathParams.clear();
-    for (const QString& seg : m_segments) {
-        if (seg.startsWith(':')) {
-            m_pathParams.append(seg);
         }
     }
 }

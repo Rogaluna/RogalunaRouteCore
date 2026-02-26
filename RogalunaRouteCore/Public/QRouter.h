@@ -38,9 +38,10 @@ public:
      * @brief 导航到指定路径（相对路径）
      * @param path 相对的目标路径（e.g., "/page")
      * @param parent 指定 push 的控件，当路径使用默认写法时，这个参数必须非空，并且需要使用 IRoutable 的子类，一般使用 this 即可
+     * @param params 路由参数，在上级视图中传入，挂载下级视图时，传入的参数会被应用，如果在路径中写了查询参数，一并视为路由参数，但路由参数优先，如果键相同，查询参数会被覆盖
      * @return true 导航成功, false 导航失败 (如未找到匹配路由)
      */
-    bool push(const QString &path, QWidget* parent = nullptr);
+    bool push(const QString &path, QWidget* parent = nullptr, const QVariantMap& params = {});
 
     /**
      * @brief 下一页
@@ -72,6 +73,11 @@ signals:
 
 private:
     void buildFlatRouteMap(const QVector<FRouteObject*>& roots);
+
+    // 格式化传入的路径
+    QString formatUrl(const QString path, QWidget* parent);
+    // 解析并定位目标路由（会处理重定向并提取路径参数）
+    FRouteObject* resolveRoute(IRoutable* rootView, const QString& targetPath, const QVariantMap& params, QVariantMap& outRouteParams, QString& outRediectPath);
 
 private:
     FRouteObject* m_registeredRoutes;                       // 存储原始注册的路由树（主要用于 install）

@@ -50,7 +50,7 @@ void MainWindow::on_route_path_changed(const QString &path)
 
 void MainWindow::on_route_changed(FRouteObject *m_currentRouteObject)
 {
-    ui->le_routePath->setText(m_currentRouteObject->getAbsolutePath());
+    // ui->le_routePath->setText(m_currentRouteObject->getAbsolutePath());
 }
 
 QRouteView *MainWindow::routeViews()

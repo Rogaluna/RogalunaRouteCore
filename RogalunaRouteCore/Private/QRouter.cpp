@@ -6,6 +6,9 @@
 
 #include <View/QDefaultNotFoundView.h>
 
+#include <QUrl>
+#include <QUrlQuery>
+
 QRouter::QRouter(QObject *parent)
     : QObject(parent)
     , m_currentRouteObject(nullptr)
@@ -13,6 +16,9 @@ QRouter::QRouter(QObject *parent)
     , m_history(nullptr)
 {
     m_history = new QRouteHistory(this);
+
+    // 设置默认 notFound 页面
+    setNotFoundView([]() -> QWidget* { return new QDefaultNotFoundView(); });
 }
 
 void QRouter::install(FRouteObject* routes, IRoutable* rootView)
@@ -31,9 +37,6 @@ void QRouter::install(FRouteObject* routes, IRoutable* rootView)
 
     // 构建路由映射
     buildFlatRouteMap({routes});
-
-    // 设置默认 notFound 页面
-    setNotFoundView([]() -> QWidget* { return new QDefaultNotFoundView(); });
 }
 
 void QRouter::setNotFoundView(CreatorFunc viewCreator)
@@ -41,7 +44,7 @@ void QRouter::setNotFoundView(CreatorFunc viewCreator)
     m_notFoundViewCreator = viewCreator;
 }
 
-bool QRouter::push(const QString &path, QWidget* parent)
+bool QRouter::push(const QString &path, QWidget* parent, const QVariantMap& params)
 {
     // 解析路径到映射的路由表中：
 
@@ -59,65 +62,17 @@ bool QRouter::push(const QString &path, QWidget* parent)
     }
 
     // === 路径标准化 ===
-    QString targetPath;
-    if (path.startsWith("./")) {
-        // 相对当前路径
-        if (m_currentRouteObject) {
-            targetPath = m_currentRouteObject->getAbsolutePath() + "/" + path;
-        } else {
-            targetPath = "/" + path;
-        }
-    } else if (path.startsWith('/')) {
-        // 使用绝对路径
-        targetPath = path;
-    } else {
-        // 相对指定的父级
-        // Q_ASSERT(parent != nullptr && qobject_cast<IRoutable*>(parent));
-
-        if (parent != nullptr && qobject_cast<IRoutable*>(parent)) {
-            m_currentRouteObject = qobject_cast<IRoutable*>(parent)->m_instRouteObject;
-        }
-
-        if (m_currentRouteObject) {
-            targetPath = m_currentRouteObject->getAbsolutePath() + "/" + path;
-        } else {
-            targetPath = "/" + path;
-        }
-    }
-
-    // 标准化：合并斜杠、去尾斜杠
-    targetPath = targetPath.trimmed();
-    if (targetPath.isEmpty()) targetPath = "/";
-    static const QRegularExpression multiSlashRegex("/+");
-    targetPath.replace(multiSlashRegex, "/");
-    if (targetPath.length() > 1 && targetPath.endsWith('/'))
-        targetPath.chop(1);
-    if (!targetPath.startsWith('/'))
-        targetPath.prepend('/');
+    QString targetPath = formatUrl(path, parent);
 
     // 目标页面路径变更
     emit currentRoutePathChange(targetPath);
 
-    // === 查找路由 ===
-    FRouteObject* targetRoute = m_flatRouteMap.value(targetPath, nullptr);
-
-    // === 处理未找到情况 ===
-    if (!targetRoute) {
-        if (m_notFoundViewCreator != nullptr) {
-            // 将 notFoundView 挂到 rootView 的第一个 routeView
-            QRouteView* views = rootView->routeViews();
-            if (views != nullptr) {
-                QWidget* m_notFoundView = m_notFoundViewCreator();
-                views->setWidget(m_notFoundView);
-            } else {
-                qWarning() << "Root view has no routeViews to display notFound page.";
-            }
-            m_currentRouteObject = nullptr;
-            return true; // 视为“成功显示”错误页
-        } else {
-            qWarning() << "Route not found and no notFoundView set:" << path;
-            return false;
-        }
+    QVariantMap routeParams;
+    QString rediectPath;
+    FRouteObject* targetRoute = resolveRoute(rootView, targetPath, params, routeParams, rediectPath);
+    if (targetPath != rediectPath) {
+        // 如果发生了重定向路径变更，更新当前页面路径
+        emit currentRoutePathChange(rediectPath);
     }
 
     // === 获取从根到目标的路由链（顺序：[root, ..., target]）===
@@ -127,44 +82,62 @@ bool QRouter::push(const QString &path, QWidget* parent)
     IRoutable* currentParentRoutable = rootView; // 初始父容器是 rootView
 
     // 跳过根路由
-    for (int i = 1; i < routeChain.size(); ++i) {
-        FRouteObject* routeNode = routeChain[i];
+    for (auto it = routeChain.begin() + 1; it != routeChain.end(); ++it)
+    {
+        FRouteObject* routeNode = *it;
 
         // 创建或复用 widget
         QWidget* widget = routeNode->widgetInstance();
         if (!widget) {
             widget = routeNode->createWidget();
-            qobject_cast<IRoutable*>(widget)->m_instRouteObject = routeNode;
 
             if (!widget) {
                 // 创建失败
                 qWarning() << "Failed to create widget for route:" << routeNode->getAbsolutePath();
                 return false;
             }
-        } else {
-            // 即便 widget 还存在在内存中，也需要将其中解除容器内控件与其容器的关联
-            // TODO: 可能有问题...
-            if (qobject_cast<IRoutable*>(widget) && qobject_cast<IRoutable*>(widget)->routeViews() != nullptr) {
-                qobject_cast<IRoutable*>(widget)->routeViews()->unsetWidget();
+            else
+            {
+                // 创建成功，对界面进行初始化设置
+                IRoutable* routableView = qobject_cast<IRoutable*>(widget);
+                routableView->m_instRouteObject = routeNode;
             }
+        }
+
+        // 如果当前迭代的视图是末尾视图
+        if (it == routeChain.end() - 1) {
+            // 将解析的查询参数通知给视图实例
+            IRoutable* routableView = qobject_cast<IRoutable*>(widget);
+            routableView->m_routeParams = routeParams;
         }
 
         // 如果是第一个节点（根路由），它应被挂到 rootView 的 routeView 中
         // 否则，currentParentRoutable 是上一级 widget（已实现 IRoutable）
 
-        auto parentViews = currentParentRoutable->routeViews();
+        QRouteView* parentViews = currentParentRoutable->routeViews();
         if (parentViews == nullptr) {
+            // 没有视图容器，无法挂载
             qWarning() << "Parent routable has no routeViews for child route:"
                        << routeNode->getAbsolutePath();
             return false;
         }
 
         QRouteView* targetView = parentViews; // 使用第一个占位视图
-        targetView->setWidget(widget);
+        // 将视图挂载到目标视图上，在执行挂载前，会进行一个比较：
+        // 如果当前挂载的视图与创建的视图指针地址一致，则表明无需覆盖挂载，否则会先解除当前挂载的视图然后将新的界面挂载到其中
+        if (targetView->getWidget() != widget) {
+            // 解除当前挂载的视图
+            IRoutable* routableView = qobject_cast<IRoutable*>(targetView->getWidget());
+            if (routableView != nullptr && routableView->routeViews() != nullptr) {
+                routableView->routeViews()->unsetWidget();
+            }
+
+            targetView->setWidget(widget); // 将创建的视图挂载到目标视图上
+        }
 
         // 更新 currentParentRoutable：如果当前 widget 支持 IRoutable，则作为下一级父容器
         currentParentRoutable = qobject_cast<IRoutable*>(widget);
-        if (!currentParentRoutable && i < routeChain.size() - 1) {
+        if (!currentParentRoutable) {
             // 还有子路由要挂，但当前 widget 不支持 IRoutable → 无法嵌套
             qWarning() << "Widget for route does not implement IRoutable, cannot nest deeper:"
                        << routeNode->getAbsolutePath();
@@ -175,7 +148,7 @@ bool QRouter::push(const QString &path, QWidget* parent)
     m_currentRouteObject = targetRoute;
     emit currentRouteObjectChange(m_currentRouteObject);
     // 变更页面成功，存入历史记录
-    m_history->push(m_currentRouteObject->getAbsolutePath());
+    m_history->push(targetPath);
 
     return true;
 }
@@ -243,4 +216,107 @@ void QRouter::buildFlatRouteMap(const QVector<FRouteObject *> &roots)
             }
         }
     }
+}
+
+QString QRouter::formatUrl(const QString path, QWidget* parent)
+{
+    // === 路径标准化 ===
+    QString targetPath;
+    if (path.startsWith("./")) {
+        // 相对当前路径
+        if (m_currentRouteObject) {
+            targetPath = m_currentRouteObject->getAbsolutePath() + "/" + path;
+        } else {
+            targetPath = "/" + path;
+        }
+    } else if (path.startsWith('/')) {
+        // 使用绝对路径
+        targetPath = path;
+    } else {
+        // 相对指定的父级
+        // Q_ASSERT(parent != nullptr && qobject_cast<IRoutable*>(parent));
+
+        if (parent != nullptr && qobject_cast<IRoutable*>(parent)) {
+            m_currentRouteObject = qobject_cast<IRoutable*>(parent)->m_instRouteObject;
+        }
+
+        if (m_currentRouteObject) {
+            targetPath = m_currentRouteObject->getAbsolutePath() + "/" + path;
+        } else {
+            targetPath = "/" + path;
+        }
+    }
+
+    // 标准化：合并斜杠、去尾斜杠
+    targetPath = targetPath.trimmed();
+    if (targetPath.isEmpty()) targetPath = "/";
+    static const QRegularExpression multiSlashRegex("/+");
+    targetPath.replace(multiSlashRegex, "/");
+    if (targetPath.length() > 1 && targetPath.endsWith('/'))
+        targetPath.chop(1);
+    if (!targetPath.startsWith('/'))
+        targetPath.prepend('/');
+
+    return targetPath;
+}
+
+FRouteObject *QRouter::resolveRoute(IRoutable* rootView, const QString &targetPath, const QVariantMap &params, QVariantMap &outRouteParams, QString& outRediectPath)
+{
+    outRediectPath = targetPath;
+    // === 提取查询参数 ===
+    QString queryPart;
+    QString purePath = outRediectPath;
+    int queryPos = purePath.indexOf('?');
+    if (queryPos != -1) {
+        queryPart = purePath.mid(queryPos + 1);
+        purePath = purePath.left(queryPos); // 去掉查询部分，保留纯路径
+    }
+    QUrlQuery urlQuery(queryPart);
+    for (const auto &key : urlQuery.queryItems(QUrl::FullyDecoded)) {
+        // 注意：如果同一个 key 出现多次，后面的会覆盖前面的
+        outRouteParams.insert(key.first, key.second);
+    }
+
+    // === 查找路由 ===
+    FRouteObject* targetRoute = m_flatRouteMap.value(purePath, nullptr);
+
+    // === 处理未找到情况 ===
+    if (!targetRoute) {
+        if (m_notFoundViewCreator != nullptr) {
+            // 将 notFoundView 挂到 rootView 的第一个 routeView
+            QRouteView* views = rootView->routeViews();
+            if (views != nullptr) {
+                QWidget* m_notFoundView = m_notFoundViewCreator();
+                views->setWidget(m_notFoundView);
+            } else {
+                qWarning() << "Root view has no routeViews to display notFound page.";
+            }
+            m_currentRouteObject = nullptr;
+            // 视为“成功显示”错误页
+        } else {
+            qWarning() << "Route not found and no notFoundView set:" << targetPath;
+        }
+
+        return targetRoute;
+    }
+
+    // === 处理重定向 ===
+    // 如果在携带的元数据中存在名为 [ redirect ] 的键，将其值作为增补路径添加到 purePath 中去
+    if (targetRoute->meta().contains("redirect")) {
+        QString redirectSeg = targetRoute->meta().value("redirect").toString();
+        purePath = purePath + "/" + redirectSeg;
+        outRediectPath = purePath;
+
+        if (!queryPart.isEmpty()) {
+            // 如果原先路径中存在查询参数，将查询参数加到末尾
+            queryPart = purePath.mid(queryPos + 1);
+            outRediectPath = purePath + "/" + queryPart;
+        }
+
+        return resolveRoute(rootView, outRediectPath, params, outRouteParams, outRediectPath);
+    }
+
+    // 从传入参数中提取路由参数并覆写到输出参数
+    outRouteParams.insert(params);
+    return targetRoute;
 }
