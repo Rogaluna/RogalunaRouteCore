@@ -247,6 +247,10 @@ void PageHome::onCurrentTreeViewChanged(const QModelIndex &current, const QModel
             QGlobalVariables::instance()->getRouter()->push("manual?id=10106", this);
         }
         break;
+        default:
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=101", this);
+        }
         }
     }
 }
