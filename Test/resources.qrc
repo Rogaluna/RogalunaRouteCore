@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Resources/10101.html</file>
+        <file>Resources/10102.html</file>
+    </qresource>
+</RCC>

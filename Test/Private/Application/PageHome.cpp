@@ -109,10 +109,26 @@ PageHome::~PageHome()
 void PageHome::init()
 {
     // 1. 构建节点树
-    m_rootNode = new HomeTreeNode(10000, "Root");
-    auto* qrouterNode = new HomeTreeNode(10100, "QRouter");
+    m_rootNode = new HomeTreeNode(1, "Root");
+    auto* qrouterNode = new HomeTreeNode(101, "RogalunaRouteCore");
     m_rootNode->addChild(qrouterNode);
         qrouterNode->addChild(new HomeTreeNode(10101, QStringLiteral("概述")));
+        qrouterNode->addChild(new HomeTreeNode(10102, QStringLiteral("安装&引入库")));
+        qrouterNode->addChild((new HomeTreeNode(10103, QStringLiteral("视图")))
+            ->addChild(new HomeTreeNode(1010301, QStringLiteral("接口IRoutable")))
+            ->addChild(new HomeTreeNode(1010302, QStringLiteral("容器QRouteView")))
+        );
+        qrouterNode->addChild((new HomeTreeNode(10104, QStringLiteral("树形路由对象")))
+            ->addChild(new HomeTreeNode(1010401, QStringLiteral("构建路由对象")))
+            ->addChild(new HomeTreeNode(1010402, QStringLiteral("路由格式")))
+            ->addChild(new HomeTreeNode(1010403, QStringLiteral("元数据")))
+        );
+        qrouterNode->addChild((new HomeTreeNode(10105, QStringLiteral("路由导航")))
+            ->addChild(new HomeTreeNode(1010501, QStringLiteral("使用导航函数")))
+            ->addChild(new HomeTreeNode(1010502, QStringLiteral("路径传参和路由传参")))
+            ->addChild(new HomeTreeNode(1010503, QStringLiteral("指定父级")))
+        );
+        qrouterNode->addChild(new HomeTreeNode(10106, QStringLiteral("路由历史")));
 
     // 2. 创建模型
     m_treeModel = new HomeTreeModel(m_rootNode, this);
@@ -161,12 +177,76 @@ void PageHome::onCurrentTreeViewChanged(const QModelIndex &current, const QModel
 
         switch(node->id)
         {
-        case 10100: // QRouter
-        case 10101:
-            {
-                QGlobalVariables::instance()->getRouter()->push("manual?id=10101", this);
-            }
-            break;
+        case 10101: // 概述
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=10101", this);
+        }
+        break;
+        case 10102: // 安装&引入库
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=10102", this);
+        }
+        break;
+        case 10103: // 视图
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=10103", this);
+        }
+        break;
+        case 1010301: // 接口IRoutable
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010301", this);
+        }
+        break;
+        case 1010302: // 容器QRouteView
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010302", this);
+        }
+        break;
+        case 10104: // 树形路由对象
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=10104", this);
+        }
+        break;
+        case 1010401: // 构建路由对象
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010401", this);
+        }
+        break;
+        case 1010402: // 路由格式
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010402", this);
+        }
+        break;
+        case 1010403: // 元数据
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010403", this);
+        }
+        break;
+        case 10105: // 路由导航
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=10105", this);
+        }
+        break;
+        case 1010501: // 使用导航函数
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010501", this);
+        }
+        break;
+        case 1010502: // 路径传参和路由传参
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010502", this);
+        }
+        break;
+        case 1010503: // 指定父级
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=1010503", this);
+        }
+        break;
+        case 10106: // 路由历史
+        {
+            QGlobalVariables::instance()->getRouter()->push("manual?id=10106", this);
+        }
+        break;
         }
     }
 }

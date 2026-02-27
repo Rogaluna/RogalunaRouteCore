@@ -70,6 +70,25 @@ bool QRouter::push(const QString &path, QWidget* parent, const QVariantMap& para
     QVariantMap routeParams;
     QString rediectPath;
     FRouteObject* targetRoute = resolveRoute(rootView, targetPath, params, routeParams, rediectPath);
+    if (targetRoute == nullptr) {
+        // 如果未找到目标路由
+        if (m_notFoundViewCreator != nullptr) {
+            // 将 notFoundView 挂到 rootView 的第一个 routeView
+            QRouteView* views = rootView->routeViews();
+            if (views != nullptr) {
+                QWidget* m_notFoundView = m_notFoundViewCreator();
+                views->setWidget(m_notFoundView);
+            } else {
+                qWarning() << "Root view has no routeViews to display notFound page.";
+            }
+            m_currentRouteObject = nullptr;
+            return true;
+            // 视为“成功显示”错误页
+        } else {
+            qWarning() << "Route not found and no notFoundView set:" << path;
+            return false;
+        }
+    }
     if (targetPath != rediectPath) {
         // 如果发生了重定向路径变更，更新当前页面路径
         emit currentRoutePathChange(rediectPath);
@@ -125,14 +144,21 @@ bool QRouter::push(const QString &path, QWidget* parent, const QVariantMap& para
         QRouteView* targetView = parentViews; // 使用第一个占位视图
         // 将视图挂载到目标视图上，在执行挂载前，会进行一个比较：
         // 如果当前挂载的视图与创建的视图指针地址一致，则表明无需覆盖挂载，否则会先解除当前挂载的视图然后将新的界面挂载到其中
-        if (targetView->getWidget() != widget) {
-            // 解除当前挂载的视图
-            IRoutable* routableView = qobject_cast<IRoutable*>(targetView->getWidget());
-            if (routableView != nullptr && routableView->routeViews() != nullptr) {
-                routableView->routeViews()->unsetWidget();
-            }
+        // 尾部视图例外，它永远会重新挂载
+        if (it == routeChain.end() - 1 ) {
+            // 如果是末尾视图，无论如何它都会重新挂载
+            targetView->setWidget(widget);
+        } else {
+            // 非末尾视图则判定是否重用
+            if (targetView->getWidget() != widget) {
+                // 解除当前挂载的视图
+                IRoutable* routableView = qobject_cast<IRoutable*>(targetView->getWidget());
+                if (routableView != nullptr && routableView->routeViews() != nullptr) {
+                    routableView->routeViews()->unsetWidget();
+                }
 
-            targetView->setWidget(widget); // 将创建的视图挂载到目标视图上
+                targetView->setWidget(widget); // 将创建的视图挂载到目标视图上
+            }
         }
 
         // 更新 currentParentRoutable：如果当前 widget 支持 IRoutable，则作为下一级父容器
@@ -282,21 +308,6 @@ FRouteObject *QRouter::resolveRoute(IRoutable* rootView, const QString &targetPa
 
     // === 处理未找到情况 ===
     if (!targetRoute) {
-        if (m_notFoundViewCreator != nullptr) {
-            // 将 notFoundView 挂到 rootView 的第一个 routeView
-            QRouteView* views = rootView->routeViews();
-            if (views != nullptr) {
-                QWidget* m_notFoundView = m_notFoundViewCreator();
-                views->setWidget(m_notFoundView);
-            } else {
-                qWarning() << "Root view has no routeViews to display notFound page.";
-            }
-            m_currentRouteObject = nullptr;
-            // 视为“成功显示”错误页
-        } else {
-            qWarning() << "Route not found and no notFoundView set:" << targetPath;
-        }
-
         return targetRoute;
     }
 

@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     // 将路由安装到根视图中
     router->install(routes, &w);
 
-    router->push("/welcome", nullptr);
+    router->push("/welcome");
 
     return a.exec();
 }

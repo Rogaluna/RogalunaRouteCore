@@ -20,12 +20,13 @@ struct HomeTreeNode
         qDeleteAll(children);
     }
 
-    void addChild(HomeTreeNode* child)
+    HomeTreeNode* addChild(HomeTreeNode* child)
     {
         if (child) {
             child->parent = this;
             children.append(child);
         }
+        return this;
     }
 };
 

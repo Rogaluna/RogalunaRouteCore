@@ -12,8 +12,11 @@ void QRouteHistory::push(const QString &entry)
 {
     if (m_bCanOpera)
     {
-        m_pastPath.push_back(entry);
-        m_futurePath.clear();
+        // 避免写入相同的历史路径
+        if (m_pastPath.isEmpty() || m_pastPath.last() != entry) {
+            m_pastPath.push_back(entry);
+            m_futurePath.clear();
+        }
     }
 
     // 重置操作状态

@@ -67,6 +67,12 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PRIVATE_SOURCES}
         ${USERINTERFACE_FILES}
     )
+
+    qt_add_resources(Test "Resources"
+        PREFIX "/"
+        FILES
+            resources.qrc
+    )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET Test APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
