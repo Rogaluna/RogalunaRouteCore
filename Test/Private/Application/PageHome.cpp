@@ -119,14 +119,12 @@ void PageHome::init()
             ->addChild(new HomeTreeNode(1010302, QStringLiteral("容器QRouteView")))
         );
         qrouterNode->addChild((new HomeTreeNode(10104, QStringLiteral("树形路由对象")))
-            ->addChild(new HomeTreeNode(1010401, QStringLiteral("构建路由对象")))
-            ->addChild(new HomeTreeNode(1010402, QStringLiteral("路由格式")))
-            ->addChild(new HomeTreeNode(1010403, QStringLiteral("元数据")))
+            ->addChild(new HomeTreeNode(1010401, QStringLiteral("路由格式")))
+            ->addChild(new HomeTreeNode(1010402, QStringLiteral("构建路由对象")))
         );
         qrouterNode->addChild((new HomeTreeNode(10105, QStringLiteral("路由导航")))
             ->addChild(new HomeTreeNode(1010501, QStringLiteral("使用导航函数")))
             ->addChild(new HomeTreeNode(1010502, QStringLiteral("路径传参和路由传参")))
-            ->addChild(new HomeTreeNode(1010503, QStringLiteral("指定父级")))
         );
         qrouterNode->addChild(new HomeTreeNode(10106, QStringLiteral("路由历史")));
 
