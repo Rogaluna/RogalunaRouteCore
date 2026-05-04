@@ -92,6 +92,7 @@ else()
 endif()
 
 target_link_libraries(Test PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(Test PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 
 # 检查是否找到
 if(ROGALUNA_ROUTE_CORE_LIBRARY AND ROGALUNA_ROUTE_CORE_INCLUDE)
@@ -100,16 +101,15 @@ if(ROGALUNA_ROUTE_CORE_LIBRARY AND ROGALUNA_ROUTE_CORE_INCLUDE)
 
     # 链接到目标
     target_link_libraries(Test PUBLIC ${ROGALUNA_ROUTE_CORE_LIBRARY})
-    target_link_libraries(Test PRIVATE Qt6::Core)
     target_include_directories(Test PUBLIC ${ROGALUNA_ROUTE_CORE_INCLUDE})
-    target_include_directories(Test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Public)
 else()
     message(FATAL_ERROR "Could not find required library")
 endif()
 
 # 包含目录配置
-target_include_directories(Test PUBLIC
+target_include_directories(Test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/Public
 )
 
 
